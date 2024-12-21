@@ -5,7 +5,7 @@ authors = [
     "Artem Vorotnikov <artem@vorotnikov.me>",
 ]
 description = "Access BOINC clients via RPC"
-edition = "2018"
+edition = "2021"
 repository = "https://github.com/vorot93/rust-boinc-rpc"
 keywords = [
     "boinc",
@@ -18,15 +18,15 @@ categories = [
 license = "Apache-2.0"
 
 [dependencies]
-bytes = "0.5"
+bytes = "1.9.0"
 encoding = "0.2"
 futures = "0.3"
 rust-crypto = "0.2"
-tokio = { version = "0.2", features = ["dns", "sync", "tcp"] }
-tokio-util = { version = "0.3", features = ["codec"] }
-tower = "0.3"
+tokio = { version = "1.42.0", features = ["net", "sync", "rt-multi-thread"] }
+tokio-util = { version = "0.7.13", features = ["codec"] }
+tower = { version = "0.5.1", features = ["full"] }
 tracing = "0.1"
 treexml = "0.7"
 
 [dev-dependencies]
-tokio = { version = "0.2", features = ["macros"] }
+tokio = { version = "1.42.0", features = ["macros"] }
