@@ -3,11 +3,10 @@ extern crate crypto;
 use bytes::BytesMut;
 use crypto::digest::Digest;
 use encoding::{all::ISO_8859_1, DecoderTrap, EncoderTrap, Encoding};
-use futures::SinkExt;
+use futures::{SinkExt, TryStreamExt};
 use tokio::{
     io::{AsyncRead, AsyncWrite},
     net::TcpStream,
-    stream::StreamExt,
 };
 use tokio_util::codec::{Decoder, Encoder, Framed};
 use tracing::*;
