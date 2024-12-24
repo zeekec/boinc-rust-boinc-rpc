@@ -1,13 +1,14 @@
 use super::util;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum Component {
     CPU,
     GPU,
     Network,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum RunMode {
     Always,
     Auto,
@@ -15,14 +16,14 @@ pub enum RunMode {
     Restore,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum CpuSched {
     Uninitialized,
     Preempted,
     Scheduled,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum ResultState {
     New,
     FilesDownloading,
@@ -34,7 +35,7 @@ pub enum ResultState {
     UploadFailed,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum Process {
     Uninitialized = 0,
     Executing = 1,
@@ -44,14 +45,14 @@ pub enum Process {
     CopyPending = 10,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct VersionInfo {
     pub major: Option<i64>,
     pub minor: Option<i64>,
     pub release: Option<i64>,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct HostInfo {
     pub tz_shift: Option<i64>,
     pub domain_name: Option<String>,
@@ -85,7 +86,7 @@ pub struct HostInfo {
     pub virtualbox_version: Option<String>,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct ProjectInfo {
     pub name: Option<String>,
     pub summary: Option<String>,
@@ -98,7 +99,7 @@ pub struct ProjectInfo {
     pub image: Option<String>,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct AccountManagerInfo {
     pub url: Option<String>,
     pub name: Option<String>,
@@ -107,7 +108,7 @@ pub struct AccountManagerInfo {
     pub cookie_failure_url: Option<String>,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Message {
     pub project_name: Option<String>,
     pub priority: Option<i64>,
@@ -116,7 +117,7 @@ pub struct Message {
     pub timestamp: Option<i64>,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct TaskResult {
     pub name: Option<String>,
     pub wu_name: Option<String>,
@@ -135,7 +136,7 @@ pub struct TaskResult {
     pub active_task: Option<ActiveTask>,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct ActiveTask {
     pub active_task_state: Option<String>,
     pub app_version_num: Option<String>,
