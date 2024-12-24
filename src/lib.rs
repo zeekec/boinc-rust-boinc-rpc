@@ -309,8 +309,8 @@ impl tower::Service<Vec<treexml::Element>> for Transport {
             return Poll::Pending;
         };
 
-        let (state, out) = match g.take().unwrap() {
-            ConnState::Connecting(mut future) => {
+        let (state, out) = match g.take() {
+            Some(ConnState::Connecting(mut future)) => {
                 let res = future.as_mut().poll(cx);
                 match res {
                     Poll::Pending => (Some(ConnState::Connecting(future)), Poll::Pending),
@@ -318,10 +318,14 @@ impl tower::Service<Vec<treexml::Element>> for Transport {
                     Poll::Ready(Err(e)) => (None, Poll::Ready(Err(e))),
                 }
             }
-            ConnState::Ready(conn) => (Some(ConnState::Ready(conn)), Poll::Ready(Ok(()))),
-            ConnState::Error(error) => (
+            Some(ConnState::Ready(conn)) => (Some(ConnState::Ready(conn)), Poll::Ready(Ok(()))),
+            Some(ConnState::Error(error)) => (
                 Some(ConnState::Error(error.clone())),
                 Poll::Ready(Err(error)),
+            ),
+            None => (
+                None,
+                Poll::Ready(Err(Error::NullError("Null state".to_string()))),
             ),
         };
 
