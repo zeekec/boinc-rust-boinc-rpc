@@ -11,7 +11,7 @@ fn future_yaml_printer<T: serde::ser::Serialize, E: std::fmt::Debug>(printable: 
             Ok(yaml) => println!("{}", yaml),
             Err(e) => eprintln!("Error: {}", e),
         },
-        Err(e) => eprintln!("Error: {:?}", e),
+        Err(ref e) => eprintln!("Error: {:?}", e),
     }
 }
 
@@ -24,23 +24,28 @@ fn main() {
 
     let password = &args[1];
 
-    match serde_yml::to_string(&boinc_rpc::models::VersionInfo::default()) {
-        Ok(yaml) => println!("{}", yaml),
-        Err(e) => eprintln!("Error: {}", e),
-    }
-
     tokio::runtime::Runtime::new().unwrap().block_on(async {
-        let transport = boinc_rpc::Transport::new("127.0.0.1:31416", Some(password));
-        let mut client = boinc_rpc::Client::new(transport);
+        let mut rpc = match boinc_rpc::rpc::DaemonStream::connect(
+            "127.0.0.1:31416".to_string(),
+            Some(password.to_string()),
+        )
+        .await
+        {
+            Ok(rpc) => rpc,
+            Err(e) => {
+                eprintln!("Error: {:?}", e);
+                return;
+            }
+        };
 
-        future_yaml_printer(
-            &client
-                .exchange_versions(&boinc_rpc::models::VersionInfo::default())
-                .await,
-        );
-        future_yaml_printer(&client.get_account_manager_info().await);
-        future_yaml_printer(&client.get_projects().await);
-        future_yaml_printer(&client.get_results(false).await);
-        future_yaml_printer(&client.get_messages(0).await);
-    })
+        let result = rpc
+            .exchange_versions(boinc_rpc::models::VersionInfo {
+                major: Some(0),
+                minor: Some(0),
+                release: Some(0),
+            })
+            .await;
+
+        future_yaml_printer(&result);
+    });
 }

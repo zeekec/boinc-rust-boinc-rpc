@@ -205,4 +205,34 @@ impl<Io: AsyncRead + AsyncWrite + Unpin> DaemonStream<Io> {
 
         Ok(data)
     }
+
+    pub async fn exchange_versions(
+        &mut self,
+        version: models::VersionInfo,
+    ) -> Result<models::VersionInfo, Error> {
+        let mut content_node = treexml::Element::new("exchange_versions");
+        {
+            let mut node = treexml::Element::new("major");
+            node.text = version.major.map(|v| format!("{v}"));
+            content_node.children.push(node);
+        }
+        {
+            let mut node = treexml::Element::new("minor");
+            node.text = version.minor.map(|v| format!("{v}"));
+            content_node.children.push(node);
+        }
+        {
+            let mut node = treexml::Element::new("release");
+            node.text = version.release.map(|v| format!("{v}"));
+            content_node.children.push(node);
+        }
+
+        let result = self.query(vec![content_node]).await;
+
+        match result {
+            Ok(data) => Ok(models::VersionInfo::from(&data[0])),
+
+            Err(e) => Err(e),
+        }
+    }
 }
