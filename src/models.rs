@@ -155,7 +155,7 @@ pub struct ActiveTask {
     pub progress_rate: Option<f64>,
 }
 
-impl<'a> From<&'a treexml::Element> for ActiveTask {
+impl From<&treexml::Element> for ActiveTask {
     fn from(node: &treexml::Element) -> Self {
         let mut e = Self::default();
         for n in &node.children {

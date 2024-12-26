@@ -9,13 +9,13 @@ use tokio::{
     net::TcpStream,
 };
 use tokio_util::codec::{Decoder, Encoder, Framed};
-use tracing::*;
+use tracing::trace;
 
 use crate::{errors::Error, util};
 
 fn compute_nonce_hash(pass: &str, nonce: &str) -> String {
     let mut digest = crypto::md5::Md5::new();
-    digest.input_str(&format!("{}{}", nonce, pass));
+    digest.input_str(&format!("{nonce}{pass}"));
     digest.result_str()
 }
 
@@ -59,7 +59,7 @@ impl Decoder for BoincCodec {
             let line = &line[..line.len() - 1];
             let line = ISO_8859_1
                 .decode(line, DecoderTrap::Strict)
-                .map_err(|e| Error::DataParse(format!("Invalid data received: {}", e)))?;
+                .map_err(|e| Error::DataParse(format!("Invalid data received: {e}")))?;
 
             trace!("Received data: {}", line);
 
@@ -100,7 +100,7 @@ impl Encoder<Vec<treexml::Element>> for BoincCodec {
         });
         out.children = item;
 
-        let data = format!("{}", out)
+        let data = format!("{out}")
             .replace("<?xml version='1.0'?>", "")
             .replace(" />", "/>");
 

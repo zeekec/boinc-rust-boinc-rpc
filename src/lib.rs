@@ -16,14 +16,14 @@
 //! ```
 
 #![warn(clippy::all, clippy::pedantic, clippy::nursery)]
-#![allow(clippy::pub_enum_variant_names, clippy::type_complexity)]
+#![allow(clippy::enum_variant_names, clippy::type_complexity)]
 
 mod errors;
 pub mod models;
 pub mod rpc;
 mod util;
 
-use crate::{errors::*, rpc::*};
+use crate::{errors::Error, rpc::DaemonStream};
 use std::{
     fmt::Display,
     future::Future,
@@ -66,7 +66,7 @@ fn verify_rpc_reply_contents(data: &[treexml::Element]) -> Result<bool, Error> {
     Ok(success)
 }
 
-impl<'a> From<&'a treexml::Element> for models::Message {
+impl From<&treexml::Element> for models::Message {
     fn from(node: &treexml::Element) -> Self {
         let mut e = Self::default();
         for n in &node.children {
@@ -94,7 +94,7 @@ impl<'a> From<&'a treexml::Element> for models::Message {
     }
 }
 
-impl<'a> From<&'a treexml::Element> for models::ProjectInfo {
+impl From<&treexml::Element> for models::ProjectInfo {
     fn from(node: &treexml::Element) -> Self {
         let mut e = Self::default();
         for n in &node.children {
@@ -142,7 +142,7 @@ impl<'a> From<&'a treexml::Element> for models::ProjectInfo {
     }
 }
 
-impl<'a> From<&'a treexml::Element> for models::AccountManagerInfo {
+impl From<&treexml::Element> for models::AccountManagerInfo {
     fn from(node: &treexml::Element) -> Self {
         let mut e = Self::default();
         for n in &node.children {
@@ -156,7 +156,7 @@ impl<'a> From<&'a treexml::Element> for models::AccountManagerInfo {
                     e.cookie_required = Some(true);
                 }
                 "cookie_failure_url" => {
-                    e.cookie_failure_url = util::trimmed_optional(&util::any_text(n))
+                    e.cookie_failure_url = util::trimmed_optional(&util::any_text(n));
                 }
                 _ => {}
             }
@@ -165,7 +165,7 @@ impl<'a> From<&'a treexml::Element> for models::AccountManagerInfo {
     }
 }
 
-impl<'a> From<&'a treexml::Element> for models::VersionInfo {
+impl From<&treexml::Element> for models::VersionInfo {
     fn from(node: &treexml::Element) -> Self {
         let mut e = Self::default();
         for n in &node.children {
@@ -180,7 +180,7 @@ impl<'a> From<&'a treexml::Element> for models::VersionInfo {
     }
 }
 
-impl<'a> From<&'a treexml::Element> for models::TaskResult {
+impl From<&treexml::Element> for models::TaskResult {
     fn from(node: &treexml::Element) -> Self {
         let mut e = Self::default();
         for n in &node.children {
@@ -237,7 +237,7 @@ impl<'a> From<&'a treexml::Element> for models::TaskResult {
     }
 }
 
-impl<'a> From<&'a treexml::Element> for models::HostInfo {
+impl From<&treexml::Element> for models::HostInfo {
     fn from(node: &treexml::Element) -> Self {
         let mut e = Self::default();
         for n in &node.children {
@@ -247,19 +247,19 @@ impl<'a> From<&'a treexml::Element> for models::HostInfo {
                 "p_membw" => e.p_membw = util::eval_node_contents(n),
                 "p_calculated" => e.p_calculated = util::eval_node_contents(n),
                 "p_vm_extensions_disabled" => {
-                    e.p_vm_extensions_disabled = util::eval_node_contents(n)
+                    e.p_vm_extensions_disabled = util::eval_node_contents(n);
                 }
-                "host_cpid" => e.host_cpid = n.text.clone(),
-                "product_name" => e.product_name = n.text.clone(),
-                "mac_address" => e.mac_address = n.text.clone(),
-                "domain_name" => e.domain_name = n.text.clone(),
-                "ip_addr" => e.ip_addr = n.text.clone(),
-                "p_vendor" => e.p_vendor = n.text.clone(),
-                "p_model" => e.p_model = n.text.clone(),
-                "os_name" => e.os_name = n.text.clone(),
-                "os_version" => e.os_version = n.text.clone(),
-                "virtualbox_version" => e.virtualbox_version = n.text.clone(),
-                "p_features" => e.p_features = n.text.clone(),
+                "host_cpid" => e.host_cpid.clone_from(&n.text),
+                "product_name" => e.product_name.clone_from(&n.text),
+                "mac_address" => e.mac_address.clone_from(&n.text),
+                "domain_name" => e.domain_name.clone_from(&n.text),
+                "ip_addr" => e.ip_addr.clone_from(&n.text),
+                "p_vendor" => e.p_vendor.clone_from(&n.text),
+                "p_model" => e.p_model.clone_from(&n.text),
+                "os_name" => e.os_name.clone_from(&n.text),
+                "os_version" => e.os_version.clone_from(&n.text),
+                "virtualbox_version" => e.virtualbox_version.clone_from(&n.text),
+                "p_features" => e.p_features.clone_from(&n.text),
                 "timezone" => e.tz_shift = util::eval_node_contents(n),
                 "p_ncpus" => e.p_ncpus = util::eval_node_contents(n),
                 "m_nbytes" => e.m_nbytes = util::eval_node_contents(n),
@@ -305,9 +305,8 @@ impl tower::Service<Vec<treexml::Element>> for Transport {
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        let mut g = match self.state.try_lock() {
-            Ok(g) => g,
-            Err(_) => return Poll::Pending,
+        let Ok(mut g) = self.state.try_lock() else {
+            return Poll::Pending;
         };
 
         let (state, out) = match g.take().unwrap() {
@@ -335,9 +334,8 @@ impl tower::Service<Vec<treexml::Element>> for Transport {
         Box::pin(async move {
             let mut state = state.lock().await;
 
-            let mut conn = match state.take() {
-                Some(ConnState::Ready(conn)) => conn,
-                _ => unreachable!(),
+            let Some(ConnState::Ready(mut conn)) = state.take() else {
+                unreachable!()
             };
 
             let query_res = conn.query(req).await;
@@ -359,7 +357,7 @@ impl<S> Client<S>
 where
     S: tower::Service<Vec<treexml::Element>, Response = Vec<treexml::Element>, Error = Error>,
 {
-    pub fn new(transport: S) -> Self {
+    pub const fn new(transport: S) -> Self {
         Self { transport }
     }
 
@@ -431,7 +429,7 @@ where
         self.get_vec(
             vec![{
                 let mut node = treexml::Element::new("get_messages");
-                node.text = Some(format!("{}", seqno));
+                node.text = Some(format!("{seqno}"));
                 node
             }],
             "msgs",
@@ -497,7 +495,7 @@ where
         ];
         self.transport.ready().await?;
         let root_node = self.transport.call(vec![req_node]).await?;
-        Ok(verify_rpc_reply_contents(&root_node)?)
+        verify_rpc_reply_contents(&root_node)
     }
 
     pub async fn exchange_versions(
@@ -507,17 +505,17 @@ where
         let mut content_node = treexml::Element::new("exchange_versions");
         {
             let mut node = treexml::Element::new("major");
-            node.text = info.minor.map(|v| format!("{}", v));
+            node.text = info.minor.map(|v| format!("{v}"));
             content_node.children.push(node);
         }
         {
             let mut node = treexml::Element::new("minor");
-            node.text = info.major.map(|v| format!("{}", v));
+            node.text = info.major.map(|v| format!("{v}"));
             content_node.children.push(node);
         }
         {
             let mut node = treexml::Element::new("release");
-            node.text = info.release.map(|v| format!("{}", v));
+            node.text = info.release.map(|v| format!("{v}"));
             content_node.children.push(node);
         }
         self.get_object(vec![content_node], "server_version").await
@@ -569,7 +567,7 @@ where
 
                 let mut node = treexml::Element::new(format!("set_{}_mode", &comp_desc));
                 let mut dur_node = treexml::Element::new("duration");
-                dur_node.text = Some(format!("{}", duration));
+                dur_node.text = Some(format!("{duration}"));
                 node.children.push(dur_node);
                 node.children.push(treexml::Element::new(mode_desc));
                 node
