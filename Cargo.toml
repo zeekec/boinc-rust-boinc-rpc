@@ -17,6 +17,12 @@ categories = [
 ]
 license = "Apache-2.0"
 
+
+[[example]]
+name = "rboinc-dump"
+path = "examples/rboinc-dump.rs"
+
+
 [dependencies]
 bytes = "1.9.0"
 encoding = "0.2"
@@ -32,3 +38,4 @@ serde = {version = "1.0", features = ["derive"]}
 
 [dev-dependencies]
 tokio = { version = "1.42.0", features = ["macros"] }
+serde_yml = "0.0.12"
