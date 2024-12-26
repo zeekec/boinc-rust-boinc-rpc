@@ -1,5 +1,6 @@
 use super::util;
 use serde::{Deserialize, Serialize};
+use treexml;
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum Component {
@@ -52,6 +53,21 @@ pub struct VersionInfo {
     pub release: Option<i64>,
 }
 
+impl From<&treexml::Element> for VersionInfo {
+    fn from(node: &treexml::Element) -> Self {
+        let mut e = Self::default();
+        for n in &node.children {
+            match &*n.name {
+                "major" => e.major = util::eval_node_contents(n),
+                "minor" => e.minor = util::eval_node_contents(n),
+                "release" => e.release = util::eval_node_contents(n),
+                _ => {}
+            }
+        }
+        e
+    }
+}
+
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct HostInfo {
     pub tz_shift: Option<i64>,
@@ -86,6 +102,43 @@ pub struct HostInfo {
     pub virtualbox_version: Option<String>,
 }
 
+impl From<&treexml::Element> for HostInfo {
+    fn from(node: &treexml::Element) -> Self {
+        let mut e = Self::default();
+        for n in &node.children {
+            match &*n.name {
+                "p_fpops" => e.p_fpops = util::eval_node_contents(n),
+                "p_iops" => e.p_iops = util::eval_node_contents(n),
+                "p_membw" => e.p_membw = util::eval_node_contents(n),
+                "p_calculated" => e.p_calculated = util::eval_node_contents(n),
+                "p_vm_extensions_disabled" => {
+                    e.p_vm_extensions_disabled = util::eval_node_contents(n);
+                }
+                "host_cpid" => e.host_cpid = n.text.clone(),
+                "product_name" => e.product_name = n.text.clone(),
+                "mac_address" => e.mac_address = n.text.clone(),
+                "domain_name" => e.domain_name = n.text.clone(),
+                "ip_addr" => e.ip_addr = n.text.clone(),
+                "p_vendor" => e.p_vendor = n.text.clone(),
+                "p_model" => e.p_model = n.text.clone(),
+                "os_name" => e.os_name = n.text.clone(),
+                "os_version" => e.os_version = n.text.clone(),
+                "virtualbox_version" => e.virtualbox_version = n.text.clone(),
+                "p_features" => e.p_features = n.text.clone(),
+                "timezone" => e.tz_shift = util::eval_node_contents(n),
+                "p_ncpus" => e.p_ncpus = util::eval_node_contents(n),
+                "m_nbytes" => e.m_nbytes = util::eval_node_contents(n),
+                "m_cache" => e.m_cache = util::eval_node_contents(n),
+                "m_swap" => e.m_swap = util::eval_node_contents(n),
+                "d_total" => e.d_total = util::eval_node_contents(n),
+                "d_free" => e.d_free = util::eval_node_contents(n),
+                _ => {}
+            }
+        }
+        e
+    }
+}
+
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct ProjectInfo {
     pub name: Option<String>,
@@ -99,6 +152,54 @@ pub struct ProjectInfo {
     pub image: Option<String>,
 }
 
+impl From<&treexml::Element> for ProjectInfo {
+    fn from(node: &treexml::Element) -> Self {
+        let mut e = Self::default();
+        for n in &node.children {
+            match &*n.name {
+                "name" => {
+                    e.name = util::trimmed_optional(&util::any_text(n));
+                }
+                "summary" => {
+                    e.summary = util::trimmed_optional(&util::any_text(n));
+                }
+                "url" => {
+                    e.url = util::trimmed_optional(&util::any_text(n));
+                }
+                "general_area" => {
+                    e.general_area = util::trimmed_optional(&util::any_text(n));
+                }
+                "specific_area" => {
+                    e.specific_area = util::trimmed_optional(&util::any_text(n));
+                }
+                "description" => {
+                    e.description = util::trimmed_optional(&util::any_text(n));
+                }
+                "home" => {
+                    e.home = util::trimmed_optional(&util::any_text(n));
+                }
+                "platfroms" => {
+                    let mut platforms = Vec::new();
+                    for platform_node in &n.children {
+                        if platform_node.name == "platform" {
+                            if let Some(v) = &platform_node.text {
+                                platforms.push(v.clone());
+                            }
+                        }
+                    }
+                    e.platforms = Some(platforms);
+                }
+                "image" => {
+                    e.image = util::trimmed_optional(&util::any_text(n));
+                }
+                _ => {}
+            }
+        }
+
+        e
+    }
+}
+
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct AccountManagerInfo {
     pub url: Option<String>,
@@ -108,6 +209,29 @@ pub struct AccountManagerInfo {
     pub cookie_failure_url: Option<String>,
 }
 
+impl From<&treexml::Element> for AccountManagerInfo {
+    fn from(node: &treexml::Element) -> Self {
+        let mut e = Self::default();
+        for n in &node.children {
+            match &*n.name {
+                "acct_mgr_url" => e.url = util::trimmed_optional(&util::any_text(n)),
+                "acct_mgr_name" => e.name = util::trimmed_optional(&util::any_text(n)),
+                "have_credentials" => {
+                    e.have_credentials = Some(true);
+                }
+                "cookie_required" => {
+                    e.cookie_required = Some(true);
+                }
+                "cookie_failure_url" => {
+                    e.cookie_failure_url = util::trimmed_optional(&util::any_text(n));
+                }
+                _ => {}
+            }
+        }
+        e
+    }
+}
+
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Message {
     pub project_name: Option<String>,
@@ -115,6 +239,34 @@ pub struct Message {
     pub msg_number: Option<i64>,
     pub body: Option<String>,
     pub timestamp: Option<i64>,
+}
+
+impl From<&treexml::Element> for Message {
+    fn from(node: &treexml::Element) -> Self {
+        let mut e = Self::default();
+        for n in &node.children {
+            match &*n.name {
+                "body" => {
+                    e.body = util::trimmed_optional(&n.cdata);
+                }
+                "project" => {
+                    e.project_name = util::trimmed_optional(&n.text);
+                }
+                "pri" => {
+                    e.priority = util::eval_node_contents(n);
+                }
+                "seqno" => {
+                    e.msg_number = util::eval_node_contents(n);
+                }
+                "time" => {
+                    e.timestamp = util::eval_node_contents(n);
+                }
+                _ => {}
+            }
+        }
+
+        e
+    }
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
@@ -136,6 +288,62 @@ pub struct TaskResult {
     pub active_task: Option<ActiveTask>,
 }
 
+impl From<&treexml::Element> for TaskResult {
+    fn from(node: &treexml::Element) -> Self {
+        let mut e = Self::default();
+        for n in &node.children {
+            match &*n.name {
+                "name" => {
+                    e.name = util::trimmed_optional(&n.text);
+                }
+                "wu_name" => {
+                    e.wu_name = util::trimmed_optional(&n.text);
+                }
+                "platform" => {
+                    e.platform = util::trimmed_optional(&n.text);
+                }
+                "version_num" => {
+                    e.version_num = util::eval_node_contents(n);
+                }
+                "plan_class" => {
+                    e.plan_class = util::trimmed_optional(&n.text);
+                }
+                "project_url" => {
+                    e.project_url = util::trimmed_optional(&n.text);
+                }
+                "final_cpu_time" => {
+                    e.final_cpu_time = util::eval_node_contents(n);
+                }
+                "final_elapsed_time" => {
+                    e.final_elapsed_time = util::eval_node_contents(n);
+                }
+                "exit_status" => {
+                    e.exit_status = util::eval_node_contents(n);
+                }
+                "state" => {
+                    e.state = util::eval_node_contents(n);
+                }
+                "report_deadline" => {
+                    e.report_deadline = util::eval_node_contents(n);
+                }
+                "received_time" => {
+                    e.received_time = util::eval_node_contents(n);
+                }
+                "estimated_cpu_time_remaining" => {
+                    e.estimated_cpu_time_remaining = util::eval_node_contents(n);
+                }
+                "completed_time" => {
+                    e.completed_time = util::eval_node_contents(n);
+                }
+                "active_task" => {
+                    e.active_task = Some(ActiveTask::from(n));
+                }
+                _ => {}
+            }
+        }
+        e
+    }
+}
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct ActiveTask {
     pub active_task_state: Option<String>,
