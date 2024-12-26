@@ -1,4 +1,4 @@
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Error {
     Connect(String),
     DataParse(String),
@@ -14,7 +14,7 @@ pub enum Error {
 
 impl From<std::io::Error> for Error {
     fn from(e: std::io::Error) -> Self {
-        Self::Network(format!("{}", e))
+        Self::Network(format!("{e}"))
     }
 }
 
