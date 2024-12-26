@@ -7,7 +7,7 @@ pub fn parse_node(s: &str) -> Result<treexml::Element, Error> {
 
     Ok(doc
         .root
-        .ok_or_else(|| Error::NullError("Root is empty".into()))?)
+        .ok_or_else(|| Error::Null("Root is empty".into()))?)
 }
 
 pub fn eval_node_contents<T>(node: &treexml::Element) -> Option<T>

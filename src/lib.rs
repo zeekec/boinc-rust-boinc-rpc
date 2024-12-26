@@ -40,24 +40,24 @@ fn verify_rpc_reply_contents(data: &[treexml::Element]) -> Result<bool, Error> {
         match &*node.name {
             "success" => success = true,
             "status" => {
-                return Err(Error::StatusError(
+                return Err(Error::Status(
                     util::eval_node_contents(node).unwrap_or(9999),
                 ));
             }
             "unauthorized" => {
-                return Err(Error::AuthError(String::new()));
+                return Err(Error::Auth(String::new()));
             }
             "error" => {
                 let error_msg = node
                     .text
                     .clone()
-                    .ok_or_else(|| Error::DaemonError("Unknown error".into()))?;
+                    .ok_or_else(|| Error::Daemon("Unknown error".into()))?;
 
                 return match &*error_msg {
-                    "unauthorized" | "Missing authenticator" => Err(Error::AuthError(error_msg)),
-                    "Missing URL" => Err(Error::InvalidURLError(error_msg)),
-                    "Already attached to project" => Err(Error::AlreadyAttachedError(error_msg)),
-                    _ => Err(Error::DataParseError(error_msg)),
+                    "unauthorized" | "Missing authenticator" => Err(Error::Auth(error_msg)),
+                    "Missing URL" => Err(Error::InvalidURL(error_msg)),
+                    "Already attached to project" => Err(Error::AlreadyAttached(error_msg)),
+                    _ => Err(Error::DataParse(error_msg)),
                 };
             }
             _ => {}
@@ -376,7 +376,7 @@ where
                 return Ok(T::from(child));
             }
         }
-        Err(Error::DataParseError("Object not found.".to_string()))
+        Err(Error::DataParse("Object not found.".to_string()))
     }
 
     async fn get_object_by_req_tag<T: for<'a> From<&'a treexml::Element>>(
@@ -411,7 +411,7 @@ where
                 }
             }
             if !success {
-                return Err(Error::DataParseError("Objects not found.".to_string()));
+                return Err(Error::DataParse("Objects not found.".to_string()));
             }
         }
         Ok(v)
@@ -468,7 +468,7 @@ where
                 }
             }
         }
-        v.ok_or_else(|| Error::DataParseError("acct_mgr_rpc_reply node not found".into()))
+        v.ok_or_else(|| Error::DataParse("acct_mgr_rpc_reply node not found".into()))
     }
 
     pub async fn connect_to_account_manager(
@@ -613,7 +613,7 @@ mod tests {
         let fixture = vec![fixture];
         assert_eq!(
             super::verify_rpc_reply_contents(&fixture).err().unwrap(),
-            Error::AuthError("Missing authenticator".to_string())
+            Error::Auth("Missing authenticator".to_string())
         );
     }
 }
