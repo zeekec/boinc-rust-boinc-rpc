@@ -59,7 +59,7 @@ impl Decoder for BoincCodec {
             let line = &line[..line.len() - 1];
             let line = ISO_8859_1
                 .decode(line, DecoderTrap::Strict)
-                .map_err(|e| Error::DataParseError(format!("Invalid data received: {}", e)))?;
+                .map_err(|e| Error::DataParse(format!("Invalid data received: {}", e)))?;
 
             trace!("Received data: {}", line);
 
@@ -72,7 +72,7 @@ impl Decoder for BoincCodec {
             };
 
             if root_node.name != expected_root {
-                return Err(Error::DataParseError(format!(
+                return Err(Error::DataParse(format!(
                     "Invalid root: {}. Expected: {}",
                     root_node.name, expected_root
                 )));
@@ -139,25 +139,25 @@ impl<Io: AsyncRead + AsyncWrite + Unpin> DaemonStream<Io> {
                 let data = conn
                     .try_next()
                     .await?
-                    .ok_or_else(|| Error::DaemonError("EOF".into()))?;
+                    .ok_or_else(|| Error::Daemon("EOF".into()))?;
 
                 for node in data {
                     match &*node.name {
                         "nonce" => {
                             if nonce_sent {
-                                return Err(Error::DaemonError(
+                                return Err(Error::Daemon(
                                     "Daemon requested nonce again - could be a bug".into(),
                                 ));
                             }
                             let mut nonce_node = treexml::Element::new("nonce_hash");
                             let pwd = password.clone().ok_or_else(|| {
-                                Error::AuthError("Password required for nonce".to_string())
+                                Error::Auth("Password required for nonce".to_string())
                             })?;
                             nonce_node.text = Some(compute_nonce_hash(
                                 &pwd,
                                 &node
                                     .text
-                                    .ok_or_else(|| Error::AuthError("Invalid nonce".into()))?,
+                                    .ok_or_else(|| Error::Auth("Invalid nonce".into()))?,
                             ));
 
                             let mut auth2_node = treexml::Element::new("auth2");
@@ -167,10 +167,10 @@ impl<Io: AsyncRead + AsyncWrite + Unpin> DaemonStream<Io> {
                             nonce_sent = true;
                         }
                         "unauthorized" => {
-                            return Err(Error::AuthError("unauthorized".to_string()));
+                            return Err(Error::Auth("unauthorized".to_string()));
                         }
                         "error" => {
-                            return Err(Error::DaemonError(format!(
+                            return Err(Error::Daemon(format!(
                                 "BOINC daemon returned error: {:?}",
                                 node.text
                             )));
@@ -179,7 +179,7 @@ impl<Io: AsyncRead + AsyncWrite + Unpin> DaemonStream<Io> {
                             return Ok(Self { conn });
                         }
                         _ => {
-                            return Err(Error::DaemonError(format!(
+                            return Err(Error::Daemon(format!(
                                 "Invalid response from daemon: {}",
                                 node.name
                             )));
@@ -187,7 +187,7 @@ impl<Io: AsyncRead + AsyncWrite + Unpin> DaemonStream<Io> {
                     }
                 }
             } else {
-                return Err(Error::DaemonError("Empty response".into()));
+                return Err(Error::Daemon("Empty response".into()));
             }
         }
     }
@@ -201,7 +201,7 @@ impl<Io: AsyncRead + AsyncWrite + Unpin> DaemonStream<Io> {
             .conn
             .try_next()
             .await?
-            .ok_or_else(|| Error::DaemonError("EOF".into()))?;
+            .ok_or_else(|| Error::Daemon("EOF".into()))?;
 
         Ok(data)
     }

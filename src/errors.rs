@@ -1,31 +1,31 @@
 #[derive(Clone, PartialEq, Debug)]
 pub enum Error {
-    ConnectError(String),
-    DataParseError(String),
-    InvalidPasswordError(String),
-    DaemonError(String),
-    NullError(String),
-    NetworkError(String),
-    StatusError(i32),
-    AuthError(String),
-    InvalidURLError(String),
-    AlreadyAttachedError(String),
+    Connect(String),
+    DataParse(String),
+    InvalidPassword(String),
+    Daemon(String),
+    Null(String),
+    Network(String),
+    Status(i32),
+    Auth(String),
+    InvalidURL(String),
+    AlreadyAttached(String),
 }
 
 impl From<std::io::Error> for Error {
     fn from(e: std::io::Error) -> Self {
-        Self::NetworkError(format!("{}", e))
+        Self::Network(format!("{}", e))
     }
 }
 
 impl From<std::string::FromUtf8Error> for Error {
     fn from(e: std::string::FromUtf8Error) -> Self {
-        Self::DataParseError(format!("UTF-8 conversion error: {}", e.utf8_error()))
+        Self::DataParse(format!("UTF-8 conversion error: {}", e.utf8_error()))
     }
 }
 
 impl From<treexml::Error> for Error {
     fn from(e: treexml::Error) -> Self {
-        Self::DataParseError(format!("XML error: {}", e))
+        Self::DataParse(format!("XML error: {e}"))
     }
 }
