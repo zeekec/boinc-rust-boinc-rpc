@@ -11,7 +11,7 @@ use tokio::{
 use tokio_util::codec::{Decoder, Encoder, Framed};
 use tracing::trace;
 
-use crate::{errors::Error, util};
+use crate::{errors::Error, models, util};
 
 fn compute_nonce_hash(pass: &str, nonce: &str) -> String {
     let mut digest = crypto::md5::Md5::new();
