@@ -19,6 +19,7 @@
 #![allow(clippy::enum_variant_names, clippy::type_complexity)]
 
 mod errors;
+pub mod messages;
 pub mod models;
 pub mod rpc;
 mod util;
