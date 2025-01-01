@@ -46,7 +46,7 @@ pub enum Process {
     CopyPending = 10,
 }
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct VersionInfo {
     pub major: Option<i64>,
     pub minor: Option<i64>,
