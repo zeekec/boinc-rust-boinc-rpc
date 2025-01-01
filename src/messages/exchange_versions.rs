@@ -1,12 +1,9 @@
-use crate::messages::helpers::{add_element, parse_node};
-use log::{trace, warn};
 use serde::{Deserialize, Serialize};
-use serde_json;
 use std::default::Default;
 use std::fmt::{Display, Formatter, Result};
-use treexml;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename = "exchange_versions")]
 pub struct ExchangeVersions {
     pub major: Option<i64>,
     pub minor: Option<i64>,
@@ -44,71 +41,62 @@ impl Default for ExchangeVersions {
 
 impl Display for ExchangeVersions {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        let json_string = serde_json::to_string(self).unwrap();
+        use quick_xml::se::Serializer;
+        use serde::Serialize;
 
-        write!(f, "{json_string}")
-    }
-}
+        let mut buffer = String::new();
+        let mut ser = Serializer::new(&mut buffer);
+        ser.indent(' ', 4);
 
-impl From<&treexml::Element> for ExchangeVersions {
-    fn from(node: &treexml::Element) -> Self {
-        if node.name != "exchange_versions" {
-            warn!("Root node is not 'exchange_versions':\n{node}");
-        } else {
-            trace!("Parsing ExchangeVersions:\n{node}");
-        }
-        let mut e = Self::default();
+        self.serialize(ser).unwrap();
 
-        e.major = parse_node("major", node);
-        e.minor = parse_node("minor", node);
-        e.release = parse_node("release", node);
-        e.name = parse_node("name", node);
-
-        e
-    }
-}
-
-impl From<&ExchangeVersions> for treexml::Element {
-    fn from(e: &ExchangeVersions) -> Self {
-        trace!("Creating XML from ExchangeVersions:\n{e}");
-
-        let mut content_node = Self::new("exchange_versions");
-
-        add_element(&mut content_node, "major", &e.major);
-        add_element(&mut content_node, "minor", &e.minor);
-        add_element(&mut content_node, "release", &e.release);
-        add_element(&mut content_node, "name", &e.name);
-
-        content_node
+        write!(f, "{buffer}")
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use serde_json;
 
     use super::*;
     extern crate testing_logger;
 
     #[test]
-    fn test_serialization() {
+    fn test_format() {
         testing_logger::setup();
 
         let version = ExchangeVersions {
             name: Some("BOINC".to_string()),
             ..Default::default()
         };
-        let xml = serde_json::to_string(&version).unwrap();
+        let xml = format!("{version}");
         assert_eq!(
             xml,
-            "{\"major\":8,\"minor\":1,\"release\":0,\"name\":\"BOINC\"}"
+            "<exchange_versions>\n    <major>8</major>\n    <minor>1</minor>\n    <release>0</release>\n    <name>BOINC</name>\n</exchange_versions>"
         );
+    }
+
+    #[test]
+    fn test_unparse() {
+        let expected = r#"<exchange_versions><major>7</major><minor>16</minor><release>16</release><name>BOINC</name></exchange_versions>"#;
+
+        let version = ExchangeVersions::new(Some(7), Some(16), Some(16), Some("BOINC".to_string()));
+
+        let result = quick_xml::se::to_string(&version).unwrap();
+
+        assert_eq!(expected, result);
     }
 
     #[test]
     fn test_parse() {
         testing_logger::setup();
 
+        let expected = ExchangeVersions {
+            major: Some(7),
+            minor: Some(16),
+            release: Some(16),
+            name: Some("BOINC".to_string()),
+        };
+
         let xml = r#"<?xml version="1.0"?>
         <exchange_versions>
             <major>7</major>
@@ -116,62 +104,27 @@ mod tests {
             <release>16</release>
             <name>BOINC</name>
         </exchange_versions>"#;
-        let node = treexml::Document::parse(xml.as_bytes())
-            .unwrap()
-            .root
-            .unwrap();
 
-        let version: ExchangeVersions = ExchangeVersions::from(&node);
+        let result: ExchangeVersions = quick_xml::de::from_str(&xml).unwrap();
 
-        assert_eq!(version.major, Some(7));
-        assert_eq!(version.minor, Some(16));
-        assert_eq!(version.release, Some(16));
-        assert_eq!(version.name, Some("BOINC".to_string()));
-    }
-
-    #[test]
-    fn test_unparse() {
-        let xml = r#"<?xml version="1.0"?>
-        <exchange_versions>
-            <major>7</major>
-            <minor>16</minor>
-            <release>16</release>
-            <name>BOINC</name>
-        </exchange_versions>"#;
-        let node = treexml::Document::parse(xml.as_bytes())
-            .unwrap()
-            .root
-            .unwrap();
-
-        let version = ExchangeVersions::new(Some(7), Some(16), Some(16), Some("BOINC".to_string()));
-
-        let xml = treexml::Element::from(&version);
-
-        assert_eq!(node, xml);
+        assert_eq!(expected, result);
     }
 
     #[test]
     fn test_parse_no_name() {
         testing_logger::setup();
 
+        let expected = ExchangeVersions::new(Some(7), Some(16), Some(16), None);
+
         let xml = r#"<?xml version="1.0"?>
         <exchange_versions>
             <major>7</major>
             <minor>16</minor>
             <release>16</release>
         </exchange_versions>"#;
-        let node = treexml::Document::parse(xml.as_bytes())
-            .unwrap()
-            .root
-            .unwrap();
-        let version: ExchangeVersions = ExchangeVersions::from(&node);
-        print!("\n\n{node}\n\n");
-        assert_eq!(version.major, Some(7));
-        assert_eq!(version.minor, Some(16));
-        assert_eq!(version.release, Some(16));
-        assert_eq!(version.name, None);
 
-        let xml = treexml::Element::from(&version);
-        assert_eq!(node, xml);
+        let result: ExchangeVersions = quick_xml::de::from_str(&xml).unwrap();
+
+        assert_eq!(expected, result);
     }
 }

@@ -2,6 +2,7 @@ use log::warn;
 
 use treexml::Element;
 
+#[allow(dead_code)]
 pub fn parse_node<T: std::str::FromStr>(name: &str, node: &Element) -> Option<T> {
     let children: Vec<&Element> = node.filter_children(|tag| tag.name == name).collect();
     if children.len() > 1 {
@@ -15,6 +16,7 @@ pub fn parse_node<T: std::str::FromStr>(name: &str, node: &Element) -> Option<T>
         .and_then(|tag| tag.text.clone()?.parse::<T>().ok())
 }
 
+#[allow(dead_code)]
 pub fn add_element<T: std::fmt::Display>(parent: &mut Element, name: &str, value: &Option<T>) {
     if let Some(v) = value {
         let mut node = Element::new(name);
